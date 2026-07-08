@@ -1,0 +1,133 @@
+{
+  "workloads": {
+    "deployments": {
+      "turnike": {
+        "maxOfflineTransactions": 5000,
+        "readinessGate": {
+          "enabled": false
+        },
+        "containers": {
+          "turnike": {
+            "image": "turnike:1.0.0",
+            "readiness": {
+              "probe": {
+                "mergeAction": "overwrite",
+                "kind": "http",
+                "httpPath": "/api/v1/health/ready",
+                "port": 8080
+              },
+              "initialDelaySeconds": 5,
+              "periodSeconds": 10,
+              "timeoutSeconds": 2,
+              "successThreshold": 1,
+              "failureThreshold": 3
+            },
+            "liveness": {
+              "probe": {
+                "mergeAction": "overwrite",
+                "kind": "http",
+                "httpPath": "/api/v1/health/live",
+                "port": 8080
+              },
+              "initialDelaySeconds": 15,
+              "periodSeconds": 20,
+              "timeoutSeconds": 2,
+              "successThreshold": 1,
+              "failureThreshold": 3
+            },
+            "startup": {
+              "probe": {
+                "mergeAction": "overwrite",
+                "kind": "http",
+                "httpPath": "/api/v1/health/start",
+                "port": 8080
+              },
+              "initialDelaySeconds": 0,
+              "periodSeconds": 5,
+              "timeoutSeconds": 2,
+              "successThreshold": 1,
+              "failureThreshold": 5
+            },
+            "resources": {
+              "cpu": {
+                "limitMilliCPU": 1000,
+                "requestMilliCPU": 500
+              },
+              "memory": {
+                "limitMiB": 1024,
+                "requestMiB": 256
+              }
+            },
+            "kind": "container",
+            "imagePullPolicy": "IfNotPresent",
+            "ports": {},
+            "envs": {},
+            "secretEnvs": {}
+          }
+        },
+        "monitorings": {
+          "log": {
+            "enabled": true,
+            "multiLineParser": ""
+          }
+        },
+        "kind": "deployment",
+        "metadata": {
+          "labels": {}
+        },
+        "replicas": 3,
+        "automountServiceAccountToken": true,
+        "terminationGracePeriodSeconds": 30,
+        "initContainers": {},
+        "nativeSidecarContainers": {},
+        "secrets": {},
+        "strategy": {
+          "kind": "rollingupdate",
+          "rollingUpdate": {
+            "maxSurge": "25%",
+            "maxUnavailable": "25%"
+          },
+          "mergeAction": "overwrite"
+        },
+        "permissions": {},
+        "injectors": {},
+        "topologySpread": [
+          {
+            "matchLabelKeys": [
+              "pod-template-hash"
+            ],
+            "maxSkew": 1,
+            "minDomains": 1,
+            "nodeAffinityPolicy": "Honor",
+            "nodeTaintsPolicy": "Honor",
+            "topologyKey": "topology.kubernetes.io/zone",
+            "whenUnsatisfiable": "DoNotSchedule"
+          }
+        ],
+        "scheduling": {
+          "podDisruptionBudget": {
+            "minAvailable": 2,
+            "maxUnavailable": null
+          }
+        }
+      }
+    },
+    "statefulsets": {},
+    "rollouts": {},
+    "daemonsets": {},
+    "cronjobs": {},
+    "jobs": {}
+  },
+  "ingresses": {
+    "nginxes": {},
+    "albs": {}
+  },
+  "services": {
+    "natives": {},
+    "nlbs": {}
+  },
+  "storages": {},
+  "serviceGroup": "access-control",
+  "serviceEnv": "test",
+  "namespace": "turnike-ops"
+}

@@ -1,0 +1,170 @@
+{
+  "ingresses": {
+    "nginxes": {
+      "loadbalancer": {
+        "hostname": "auth-test.sirketadi.com",
+        "configurationSnippet": "",
+        "proxy": {
+          "bodySize": 1,
+          "timeouts": {
+            "connectSeconds": 60,
+            "sendSeconds": 60,
+            "readSeconds": 60
+          }
+        },
+        "stickySession": {
+          "enabled": false,
+          "mode": "balanced",
+          "duration": 86400
+        }
+      }
+    },
+    "albs": {}
+  },
+  "services": {
+    "natives": {
+      "yetkilendirme": {
+        "ports": {
+          "http": {
+            "name": "http",
+            "port": 80,
+            "targetPort": 8080,
+            "protocol": "TCP"
+          }
+        },
+        "monitorings": {}
+      }
+    },
+    "nlbs": {}
+  },
+  "workloads": {
+    "deployments": {
+      "yetkilendirme": {
+        "readinessGate": {
+          "enabled": false
+        },
+        "containers": {
+          "yetkilendirme": {
+            "image": "yetkilendirme:1.2.3",
+            "envs": {
+              "AUTH_STRATEGY": "RFID_TOKEN"
+            },
+            "ports": {
+              "http": {
+                "name": "http",
+                "port": 8080,
+                "protocol": "TCP"
+              }
+            },
+            "readiness": {
+              "probe": {
+                "mergeAction": "overwrite",
+                "kind": "http",
+                "httpPath": "/api/v1/health/ready",
+                "port": 8080
+              },
+              "initialDelaySeconds": 5,
+              "periodSeconds": 10,
+              "timeoutSeconds": 2,
+              "successThreshold": 1,
+              "failureThreshold": 3
+            },
+            "liveness": {
+              "probe": {
+                "mergeAction": "overwrite",
+                "kind": "http",
+                "httpPath": "/api/v1/health/live",
+                "port": 8080
+              },
+              "initialDelaySeconds": 15,
+              "periodSeconds": 20,
+              "timeoutSeconds": 2,
+              "successThreshold": 1,
+              "failureThreshold": 3
+            },
+            "startup": {
+              "probe": {
+                "mergeAction": "overwrite",
+                "kind": "http",
+                "httpPath": "/api/v1/health/start",
+                "port": 8080
+              },
+              "initialDelaySeconds": 0,
+              "periodSeconds": 5,
+              "timeoutSeconds": 2,
+              "successThreshold": 1,
+              "failureThreshold": 5
+            },
+            "resources": {
+              "cpu": {
+                "limitMilliCPU": 500,
+                "requestMilliCPU": 100
+              },
+              "memory": {
+                "limitMiB": 1024,
+                "requestMiB": 512
+              }
+            },
+            "kind": "container",
+            "imagePullPolicy": "IfNotPresent",
+            "secretEnvs": {}
+          }
+        },
+        "monitorings": {
+          "log": {
+            "enabled": true,
+            "multiLineParser": ""
+          }
+        },
+        "kind": "deployment",
+        "metadata": {
+          "labels": {}
+        },
+        "replicas": 2,
+        "automountServiceAccountToken": true,
+        "terminationGracePeriodSeconds": 30,
+        "initContainers": {},
+        "nativeSidecarContainers": {},
+        "secrets": {},
+        "strategy": {
+          "kind": "rollingupdate",
+          "rollingUpdate": {
+            "maxSurge": "25%",
+            "maxUnavailable": "25%"
+          },
+          "mergeAction": "overwrite"
+        },
+        "permissions": {},
+        "injectors": {},
+        "topologySpread": [
+          {
+            "matchLabelKeys": [
+              "pod-template-hash"
+            ],
+            "maxSkew": 1,
+            "minDomains": 1,
+            "nodeAffinityPolicy": "Honor",
+            "nodeTaintsPolicy": "Honor",
+            "topologyKey": "topology.kubernetes.io/zone",
+            "whenUnsatisfiable": "DoNotSchedule"
+          }
+        ],
+        "scheduling": {
+          "podDisruptionBudget": {
+            "minAvailable": 1,
+            "maxUnavailable": null
+          }
+        }
+      }
+    },
+    "statefulsets": {},
+    "rollouts": {},
+    "daemonsets": {},
+    "cronjobs": {},
+    "jobs": {}
+  },
+  "storages": {},
+  "serviceGroup": "authorization",
+  "serviceEnv": "test",
+  "namespace": "auth-ops"
+}

@@ -1,0 +1,78 @@
+version: '3.8'
+
+services:
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama-server
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+    restart: always
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  ollama-init:
+    image: ollama/ollama:latest
+    container_name: ollama-puller
+    volumes:
+      - ollama-data:/root/.ollama
+    environment:
+      # İŞTE KRİTİK NOKTA: 'localhost' yerine, doğrudan 'ollama' servisinin 11434 portuna istek atmasını söylüyoruz.
+      - OLLAMA_HOST=ollama:11434
+    depends_on:
+      ollama:
+        condition: service_healthy
+    entrypoint: [ "/bin/sh", "-c" ]
+    command: >
+      "echo '==> Checking/Pulling qwen2.5:3b...' &&
+       ollama pull qwen2.5:3b &&
+       echo '==> Model qwen2.5:3b is ready!'"
+  
+  schema-server:
+    build: 
+      context: ./schema-server # Bu klasördeki Dockerfile'ı okur
+    container_name: suffatech-schema-server
+    ports:
+      - "5001:5001"
+    volumes:
+      # Şema dosyalarının konteyner içinde de okunabilmesi için
+      - ./data:/data 
+    command: ["--listen", "0.0.0.0:5001", "--schema-dir", "/data/schemas"]
+
+  # 3. VALUES SERVİSİ
+  values-server:
+    build: 
+      context: ./values-server # Bu klasördeki Dockerfile'ı okur
+    container_name: suffatech-values-server
+    ports:
+      - "5002:5002"
+    volumes:
+      - ./data:/data
+    command: ["--listen", "0.0.0.0:5002", "--values-dir", "/data/values"]
+
+  # 4. BOT SERVİSİ (Orkestratör)
+  bot-server:
+    build: 
+      context: ./bot-server # Bu klasördeki Dockerfile'ı okur
+    container_name: suffatech-bot-server
+    ports:
+      - "5003:5003"
+    depends_on:
+      - ollama
+      - schema-server
+      - values-server
+    command: ["--listen", "0.0.0.0:5003"]
+
+volumes:
+  ollama-data:

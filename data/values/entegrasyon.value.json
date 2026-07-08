@@ -1,0 +1,191 @@
+{
+  "services": {
+    "nlbs": {
+      "entegrasyon": {
+        "accessLogs": {
+          "mergeAction": "overwrite",
+          "enabled": false
+        },
+        "ssl": {
+          "mergeAction": "overwrite",
+          "enabled": false
+        },
+        "healthcheck": {
+          "healthyThreshold": 3,
+          "unhealthyThreshold": 3,
+          "interval": 10,
+          "timeout": 10,
+          "port": "traffic-port",
+          "probe": {
+            "mergeAction": "overwrite",
+            "kind": "http",
+            "path": "/api/v1/health/ready",
+            "successCodes": "200",
+            "protocol": "HTTP"
+          }
+        },
+        "ports": {
+          "grpc": {
+            "name": "grpc",
+            "port": 50051,
+            "targetPort": 50051,
+            "protocol": "TCP"
+          }
+        },
+        "deletionProtection": true,
+        "clientRoutingPolicy": "any_availability_zone",
+        "crossZoneLoadBalancing": true,
+        "proxyProtocol": false,
+        "schema": "internal",
+        "deregistrationDelay": 1,
+        "deregistrationConnectionTermination": false,
+        "preserveClientIP": false,
+        "tags": []
+      }
+    },
+    "natives": {}
+  },
+  "workloads": {
+    "statefulsets": {
+      "entegrasyon": {
+        "readinessGate": {
+          "enabled": false
+        },
+        "containers": {
+          "entegrasyon": {
+            "image": "entegrasyon:1.0.0",
+            "ports": {
+              "grpc": {
+                "name": "grpc",
+                "port": 50051,
+                "protocol": "TCP"
+              }
+            },
+            "readiness": {
+              "probe": {
+                "mergeAction": "overwrite",
+                "kind": "http",
+                "httpPath": "/api/v1/health/ready",
+                "port": 8080
+              },
+              "initialDelaySeconds": 5,
+              "periodSeconds": 10,
+              "timeoutSeconds": 2,
+              "successThreshold": 1,
+              "failureThreshold": 3
+            },
+            "liveness": {
+              "probe": {
+                "mergeAction": "overwrite",
+                "kind": "http",
+                "httpPath": "/api/v1/health/live",
+                "port": 8080
+              },
+              "initialDelaySeconds": 15,
+              "periodSeconds": 20,
+              "timeoutSeconds": 2,
+              "successThreshold": 1,
+              "failureThreshold": 3
+            },
+            "startup": {
+              "probe": {
+                "mergeAction": "overwrite",
+                "kind": "http",
+                "httpPath": "/api/v1/health/start",
+                "port": 8080
+              },
+              "initialDelaySeconds": 0,
+              "periodSeconds": 10,
+              "timeoutSeconds": 2,
+              "successThreshold": 1,
+              "failureThreshold": 5
+            },
+            "resources": {
+              "cpu": {
+                "limitMilliCPU": 2500,
+                "requestMilliCPU": 2000
+              },
+              "memory": {
+                "limitMiB": 4096,
+                "requestMiB": 2048
+              }
+            },
+            "kind": "container",
+            "imagePullPolicy": "IfNotPresent",
+            "envs": {},
+            "secretEnvs": {}
+          }
+        },
+        "monitorings": {
+          "log": {
+            "enabled": true,
+            "multiLineParser": ""
+          }
+        },
+        "kind": "statefulset",
+        "metadata": {
+          "labels": {}
+        },
+        "replicas": 3,
+        "automountServiceAccountToken": true,
+        "terminationGracePeriodSeconds": 30,
+        "initContainers": {},
+        "nativeSidecarContainers": {},
+        "secrets": {},
+        "strategy": {
+          "kind": "rollingupdate",
+          "rollingUpdate": {
+            "partition": 0
+          },
+          "mergeAction": "overwrite"
+        },
+        "permissions": {
+          "serviceAccount": {
+            "iamRole": "serviceAccount:my-project.svc.id.goog[entegrasyon-ops/entegrasyon-sa]"
+          }
+        },
+        "storages": {
+          "data": {
+            "accessModes": [
+              "ReadWriteOnce"
+            ],
+            "storageGibiBytes": 50,
+            "storageClass": "gp3"
+          }
+        },
+        "injectors": {},
+        "topologySpread": [
+          {
+            "matchLabelKeys": [],
+            "maxSkew": 1,
+            "minDomains": 1,
+            "nodeAffinityPolicy": "Honor",
+            "nodeTaintsPolicy": "Honor",
+            "topologyKey": "topology.kubernetes.io/zone",
+            "whenUnsatisfiable": "DoNotSchedule"
+          }
+        ],
+        "scheduling": {
+          "podDisruptionBudget": {
+            "minAvailable": 1,
+            "maxUnavailable": null
+          }
+        },
+        "podManagementPolicy": "OrderedReady"
+      }
+    },
+    "deployments": {},
+    "rollouts": {},
+    "daemonsets": {},
+    "cronjobs": {},
+    "jobs": {}
+  },
+  "ingresses": {
+    "nginxes": {},
+    "albs": {}
+  },
+  "storages": {},
+  "serviceGroup": "integration",
+  "serviceEnv": "test",
+  "namespace": "entegrasyon-ops"
+}
