@@ -3,8 +3,6 @@ import json
 import os
 import uvicorn
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import JSONResponse
-
 
 app = FastAPI()
 VALUES_DIR = "/data/values"
