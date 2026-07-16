@@ -1,7 +1,7 @@
-# [AI-Assisted Application Configuration Tool and CI/CD Steps 
-### (CI is complete, CD files will be committed as soon as its finished)]
+# [AI-Assisted Application Configuration Tool and CI/CD Steps ]
+### (CI is complete, CD files will be committed in the future as soon as its finished along with Terraform and other files consisting of other necessary tools)
 
-This project provides a **local, AI-driven configuration management system** that allows users to modify application configuration values using **natural language**.
+This project provides a **local, AI-driven configuration management system** that allows users to modify application configuration values using **natural language**. And its CI/CD steps using tools such as Jenkins, ArgoCD, Kubernetes, Terraform
 
 Instead of manually editing JSON files, users can send plain-English requests such as:
 
