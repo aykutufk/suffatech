@@ -21,6 +21,10 @@ MAX_CHANGES_PER_SERVICE = 5
 
 app = FastAPI()
 
+@app.get("/health")
+def health_check():
+    return {"status": "healthy"}
+
 class UserMessage(BaseModel):
     input: str
 
