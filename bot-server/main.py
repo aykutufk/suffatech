@@ -14,7 +14,7 @@ VALUES_SERVICE_URL = "http://values-server:5002"
 OLLAMA_MODEL = "qwen2.5:3b"
 ALLOWED_SERVICES = ["turnike", "yetkilendirme", "entegrasyon"]
 
-# Limitler
+ 
 MAX_SERVICES_PER_PROMPT = 3
 MAX_RETRIES = 3 # LLM'in hatasını düzeltmesi için verilecek maksimum şans
 MAX_CHANGES_PER_SERVICE = 5
@@ -125,7 +125,7 @@ async def generate_patches_for_service(service_name: str, schema: dict, current_
     }, indent=2)
 
     
-    # Prompt güncellendi: Hatalı örnek kaldırıldı ve ağaç yapısını (dot-notation) izlemesi kesin bir dille emredildi.
+   
     system_prompt = f"""You are an expert Kubernetes configuration editor.
     Your job is to generate a JSON patch array for the '{service_name}' service based on the requested changes.
     
@@ -205,7 +205,7 @@ async def process_user_request(message: UserMessage):
     if not tasks:
         raise HTTPException(status_code=400, detail="Could not identify any valid services in the request.")
 
-    # Mimari Sınır Kontrolü 1: Max Servis Limiti
+    
     if len(tasks) > MAX_SERVICES_PER_PROMPT:
         raise HTTPException(
             status_code=400, 
@@ -214,8 +214,7 @@ async def process_user_request(message: UserMessage):
 
     final_results = {}
 
-    # 2. Her bir görev (servis) için akışı çalıştır
-    # 2. Her bir görev (servis) için akışı çalıştır
+    
     for task in tasks:
         service_name = task.get("service")
         changes = task.get("changes", [])
@@ -245,7 +244,7 @@ async def process_user_request(message: UserMessage):
                 # LLM'e hatasını söylüyoruz ki düzeltebilsin
                 current_changes_prompt = f"PREVIOUS ATTEMPT FAILED. ERROR: '{last_error}'. FIX YOUR MISTAKE! Original request: {changes}"
 
-            # Yamaları üret
+            
             patches = await generate_patches_for_service(
                 service_name=service_name,
                 schema=app_data["schema"],
@@ -281,14 +280,14 @@ async def process_user_request(message: UserMessage):
                 last_error = e.message
                 print(f"[VALIDATION FAILED - ATTEMPT {attempt}] Error: {last_error}")
                 
-        # Eğer 3 deneme de başarısız olursa, 500 dön (sonsuz döngüyü engelle)
+        
         if not success:
             raise HTTPException(
                 status_code=500, 
                 detail=f"Validation failed for '{service_name}' after {MAX_RETRIES} attempts. AI could not resolve the schema path. Last error: {last_error}"
             )
 
-    # 5. Tüm servislerin güncellenmiş hallerini dön
+    
     print("\n[STEP 5] Orchestration complete. Returning all updated configurations.")
     return final_results
 
