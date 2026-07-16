@@ -7,6 +7,10 @@ from fastapi import FastAPI, HTTPException
 app = FastAPI()
 VALUES_DIR = "/data/values"
 
+@app.get("/health")
+def health_check():
+    return {"status": "healthy"}
+
 @app.get("/{app_name}")
 async def get_values(app_name: str):
     values_path = os.path.join(VALUES_DIR, f"{app_name}.value.json")
