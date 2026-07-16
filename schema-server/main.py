@@ -7,6 +7,10 @@ import uvicorn
 
 app = FastAPI()
 
+@app.get("/health")
+def health_check():
+    return {"status": "healthy"}
+
 SCHEMA_DIR = "data/schemas"
 
 @app.get("/{app_name}")
