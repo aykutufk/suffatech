@@ -1,4 +1,5 @@
-# [AI-Assisted Application Configuration Tool and CI/CD Steps (CI is complete, CD files will be committed as soon as its finished)]
+# [AI-Assisted Application Configuration Tool and CI/CD Steps 
+### (CI is complete, CD files will be committed as soon as its finished)]
 
 This project provides a **local, AI-driven configuration management system** that allows users to modify application configuration values using **natural language**.
 
