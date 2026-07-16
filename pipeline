@@ -1,0 +1,278 @@
+pipeline {
+    agent any
+
+    environment {
+        SONAR_SCANNER = tool ' Sonar Scanner'
+        IMAGE_TAG = "${BUILD_NUMBER}"
+
+        REGISTRY = "YOUR_NEXUS_IP_ADRESS:8083"        // DockerHub veya Nexus
+        BOT_IMAGE = "${REGISTRY}/bot-server"
+        SCHEMA_IMAGE = "${REGISTRY}/schema-server"
+        VALUES_IMAGE = "${REGISTRY}/values-server"
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git branch: 'main', credentialsId: 'YOUR_CRED', url: 'https://github.com/aykutufk/suffatech'
+            }
+        }
+
+        stage('Install Dependencies') {
+            steps {
+                sh '''
+                python3 -m venv venv
+
+                . venv/bin/activate
+
+                pip install --upgrade pip
+
+                pip install -r bot-server/requirements.txt
+                pip install -r schema-server/requirements.txt
+                pip install -r values-server/requirements.txt
+
+                pip install pytest
+                pip install pytest-cov
+                pip install ruff
+                pip install bandit
+                pip install pip-audit
+                '''
+            }
+        }
+
+        stage('Lint') {
+            steps {
+                sh '''
+                . venv/bin/activate
+                 ruff check bot-server schema-server values-server
+                '''
+            }
+        }
+
+        stage('Bandit Security Scan') {
+            steps {
+                sh '''
+                . venv/bin/activate
+                bandit -r bot-server schema-server values-server
+                '''
+            }
+        }
+
+        stage('Dependency Scan') {
+            steps {
+                sh '''
+                . venv/bin/activate
+                pip-audit
+                '''
+            }
+        }
+
+        stage('Unit Test') {
+            steps {
+                sh '''
+                . venv/bin/activate
+        
+                # Testleri sadece senin servislerinde arar ve coverage (kapsama) raporunu sadece o klasörler için çıkarır
+                pytest bot-server schema-server values-server \
+                --cov=bot-server --cov=schema-server --cov=values-server \
+                --cov-report=xml \
+                --cov-report=term || true
+                '''
+            }
+        }
+
+        stage('SonarQube Analysis') {
+            steps {
+                withSonarQubeEnv('SonarQubeServer') {
+                    sh """
+                      ${SONAR_SCANNER}/bin/sonar-scanner \
+                      -Dsonar.projectKey=my-python-project \
+                      -Dsonar.sources=bot-server,schema-server,values-server \
+                      -Dsonar.python.coverage.reportPaths=coverage.xml
+                    """
+                }
+            }
+        }
+
+        stage('Quality Gate') {
+            steps {
+                script {
+                    waitForQualityGate abortPipeline: false, credentialsId: 'suffatech-sonar-token'
+                }
+            }
+        }
+
+        stage('Build Docker Images') {
+            parallel {
+                stage('Bot Server') {
+                    steps {
+                        sh """
+                        docker build \
+                        -t ${BOT_IMAGE}:${IMAGE_TAG} \
+                        bot-server
+                        """
+                    }
+                }
+
+                stage('Schema Server') {
+                    steps {
+                        sh """
+                        docker build \
+                        -t ${SCHEMA_IMAGE}:${IMAGE_TAG} \
+                        schema-server
+                        """
+                    }
+                }
+
+                stage('Values Server') {
+                    steps {
+                        sh """
+                        docker build \
+                        -t ${VALUES_IMAGE}:${IMAGE_TAG} \
+                        values-server
+                        """
+                    }
+                }
+
+            }
+        }
+        
+        stage('Trivy DB Update') {
+            steps {
+                sh 'trivy image --download-db-only'
+            }
+        }
+
+       stage('Trivy Scan') {
+            parallel {
+                stage('Scan Bot') {
+                    steps {
+                        // exit-code 0 yaparak pipeline'ın kırılmasını engelliyorum ve çıktıyı dosyaya yazdırıyorum
+                        sh """
+                        trivy image --skip-db-update \
+                          --exit-code 0 \
+                          --severity HIGH,CRITICAL \
+                          --format table \
+                          --output bot-trivy-report.txt \
+                          ${BOT_IMAGE}:${IMAGE_TAG}
+                        """
+                    }
+                    post {
+                        always {
+                            // Oluşan güvenlik raporunu Jenkins arayüzüne "Artifact" olarak ekliyoruz
+                            archiveArtifacts artifacts: 'bot-trivy-report.txt', allowEmptyArchive: true
+                        }
+                    }
+                }
+                
+                stage('Scan Schema') {
+                    steps {
+                        sh """
+                        trivy image --skip-db-update \
+                          --exit-code 0 \
+                          --severity HIGH,CRITICAL \
+                          --format table \
+                          --output schema-trivy-report.txt \
+                          ${SCHEMA_IMAGE}:${IMAGE_TAG}
+                        """
+                    }
+                    post {
+                        always {
+                            archiveArtifacts artifacts: 'schema-trivy-report.txt', allowEmptyArchive: true
+                        }
+                    }
+                }
+
+                stage('Scan Values') {
+                    steps {
+                        sh """
+                        trivy image --skip-db-update \
+                          --exit-code 0 \
+                          --severity HIGH,CRITICAL \
+                          --format table \
+                          --output values-trivy-report.txt \
+                          ${VALUES_IMAGE}:${IMAGE_TAG}
+                        """
+                    }
+                    post {
+                        always {
+                            archiveArtifacts artifacts: 'values-trivy-report.txt', allowEmptyArchive: true
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Docker Compose Test') {
+            steps {
+                sh """
+                IMAGE_TAG=${IMAGE_TAG} REGISTRY=${REGISTRY} docker compose up -d --build
+                sleep 20
+                docker ps
+                """
+            }
+        }
+        
+        stage('Health Check') {
+            steps {
+                sh '''
+                curl --fail http://localhost:5001/health
+                curl --fail http://localhost:5002/health
+                curl --fail http://localhost:5003/health
+                '''
+            }
+        }
+
+        stage('Docker Compose Down') {
+            steps {
+                sh '''
+                docker compose down
+                '''
+            }
+        }
+
+        stage('Push Images') {
+           
+            parallel {
+                stage('Push Bot') {
+                    steps {
+                        withDockerRegistry(credentialsId: 'nexusDockerCred', url: "http://${REGISTRY}") {
+                            sh "docker push ${BOT_IMAGE}:${IMAGE_TAG}"
+                        }
+                    }
+                }
+
+                stage('Push Schema') {
+                    steps {
+                        withDockerRegistry(credentialsId: 'nexusDockerCred', url: "http://${REGISTRY}") {
+                            sh "docker push ${SCHEMA_IMAGE}:${IMAGE_TAG}"
+                        }
+                    }
+                }
+
+                stage('Push Values') {
+                    steps {
+                        withDockerRegistry(credentialsId: 'nexusDockerCred', url: "http://${REGISTRY}") {
+                            sh "docker push ${VALUES_IMAGE}:${IMAGE_TAG}"
+                        }
+                    }
+                }
+
+            }
+        }
+    }
+    post {
+        always {
+            cleanWs()
+        }
+
+        success {
+            echo "Pipeline completed successfully."
+        }
+
+        failure {
+            echo "Pipeline failed."
+        }
+    }
+ 
+} 
