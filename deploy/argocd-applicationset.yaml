@@ -1,0 +1,52 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: suffatech-microservices
+  namespace: argocd
+spec:
+  # 1. BANT ŞEFİNİN İŞ LİSTESİ (Generator)
+  generators:
+    - list:
+        elements:
+          - name: bot-server
+            valuesFile: deploy/bot-server-values.yaml
+          - name: schema-server
+            valuesFile: deploy/schema-server-values.yaml
+          - name: values-server
+            valuesFile: deploy/values-server-values.yaml
+
+  # 2. HER SERVİS İÇİN UYGULANACAK ŞABLON (Template)
+  template:
+    metadata:
+      name: '{{name}}'
+      namespace: argocd
+      labels:
+        app.kubernetes.io/managed-by: argocd
+        app.kubernetes.io/part-of: suffatech-project
+    spec:
+      project: default
+      # Git Deposu ve Helm Şablon Konumu
+      source:
+        repoURL: 'https://github.com/aykutufk/suffatech.git'
+        targetRevision: main
+        path: charts/microservice  # Ortak DRY Şablonumuzun yeri
+        helm:
+          valueFiles:
+            # ÖNEMLİ: ArgoCD value dosyasını chart dizinine göre arar. 
+            # charts/microservice klasöründen çıkıp deploy/ klasörüne gitmek için "../../" kullanıyoruz.
+            - '../../{{valuesFile}}'
+
+      # Hedef Kubernetes Kümeli ve Namespace
+      destination:
+        server: 'https://kubernetes.default.svc'
+        namespace: suffatech  # Podların, PVC'lerin ve VSO Sırlarının bulunduğu namespace
+
+      # Kurumsal GitOps Senkronizasyon ve Güvenlik Kuralları
+      syncPolicy:
+        automated:
+          prune: true      # Git'ten silinen bir kaynağı K8s kümesinden de otomatik sil
+          selfHeal: true   # Birisi kümeye elle müdahale ederse (örn: pod sayısını değiştirirse) Git'teki eskiye zorla döner
+        syncOptions:
+          - CreateNamespace=true        # suffatech namespace'i yoksa otomatik oluştur
+          - ApplyOutOfSyncOnly=true     # Sadece değişikliğe uğrayan kaynakları güncelle (yüksek performans)
+          - PrunePropagationPolicy=foreground
