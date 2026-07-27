@@ -2,7 +2,7 @@ fullnameOverride: "bot-server"
 replicaCount: 2
 
 image:
-  repository: "<NEXUS_PRIVATE_IP>:8083/bot-server"
+  repository: "nexus.suffatech.internal:8083/bot-server"
   tag: "v1.0.0"
 
 args:

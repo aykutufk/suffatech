@@ -2,7 +2,7 @@ fullnameOverride: "schema-server"
 replicaCount: 1
 
 image:
-  repository: "<NEXUS_PRIVATE_IP>:8083/schema-server"
+  repository: "nexus.suffatech.internal:8083/schema-server"
   tag: "v1.0.0"
 
 # Spec'te belirtilen argümanlar tanımlandı
