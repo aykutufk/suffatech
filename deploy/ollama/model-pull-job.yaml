@@ -28,7 +28,7 @@ spec:
 
       containers:
         - name: model-pull
-          image: ollama/ollama:0.32.0
+          image: ollama/ollama:0.32.5
           imagePullPolicy: IfNotPresent
 
           # Resmi imajın ENTRYPOINT'i /bin/ollama olduğu için
