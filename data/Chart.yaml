@@ -1,0 +1,9 @@
+apiVersion: v2
+
+name: suffatech-data
+
+description: Suffatech Schema ve Values JSON dosyalarını ConfigMap olarak yöneten Helm chart
+
+type: application
+
+version: 1.0.0

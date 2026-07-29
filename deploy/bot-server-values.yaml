@@ -1,5 +1,5 @@
 fullnameOverride: "bot-server"
-replicaCount: 2
+replicaCount: 1
 
 image:
   repository: "nexus.suffatech.internal:8083/bot-server"
@@ -15,15 +15,19 @@ service:
 
 # Diğer servislere Kubernetes iç IP'lerinden (Cluster DNS) ulaşması için adreslerini veriyoruz
 env:
-  - name: SCHEMA_SERVICE_URL
-    value: "http://schema-server.suffatech.svc.cluster.local"
-  - name: VALUES_SERVICE_URL
-    value: "http://values-server.suffatech.svc.cluster.local"
+  - name: OLLAMA_BASE_URL
+    value: "http://ollama:11434"
 
+  - name: OLLAMA_MODEL
+    value: "qwen2.5:3b"
+
+  - name: SCHEMA_SERVICE_URL
+    value: "http://schema-server:5001"
+
+  - name: VALUES_SERVICE_URL
+    value: "http://values-server:5002"
 # AI Modeli API anahtarları gibi sırları VSO üzerinden Vault'tan topluca çekiyoruz
-envFrom:
-  - secretRef:
-      name: vault-bot-server-secrets
+envFrom: []
 
 resources:
   requests:

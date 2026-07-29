@@ -19,11 +19,12 @@ service:
 volumeMounts:
   - name: schema-data
     mountPath: /data/schemas
+    readOnly: true
 
 volumes:
   - name: schema-data
-    persistentVolumeClaim:
-      claimName: schema-server-pvc # Altyapında açacağımız PVC
+    configMap:
+      name: schema-server-data
 
 # Endpoint (path) net olmadığı için en güvenli yol olan Port Kontrolü (TCP Socket) yapıyoruz
 livenessProbe:

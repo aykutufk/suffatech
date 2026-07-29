@@ -1,1 +1,12 @@
 session-manager-plugin.deb
+# Python Sanal Ortamları
+venv/
+.venv/
+env/
+
+# Python Önbellek (Cache) Dosyaları
+__pycache__/
+*.pyc
+
+# Çevresel Değişkenler ve Şifreler (Çok Kritik!)
+.env

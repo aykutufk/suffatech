@@ -6,7 +6,7 @@ image:
   tag: "v1.0.0"
 
 args:
-  - "--schema-dir=/data/values"
+  - "--values-dir=/data/values"
   - "--listen=0.0.0.0:5002"
 
 service:
@@ -17,12 +17,13 @@ service:
 volumeMounts:
   - name: values-data
     mountPath: /data/values
+    readOnly: true
 
 volumes:
   - name: values-data
-    persistentVolumeClaim:
-      claimName: values-server-pvc
-
+    configMap:
+      name: values-server-data
+      
 livenessProbe:
   tcpSocket:
     port: http

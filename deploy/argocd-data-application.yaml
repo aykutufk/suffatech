@@ -1,0 +1,29 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+
+metadata:
+  name: suffatech-data
+  namespace: argocd
+
+spec:
+  project: default
+
+  source:
+    repoURL: https://github.com/aykutufk/suffatech.git
+    targetRevision: main
+    path: data
+
+    helm:
+      releaseName: suffatech-data
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: suffatech
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+
+    syncOptions:
+      - CreateNamespace=false

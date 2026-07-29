@@ -1,0 +1,2 @@
+schemaConfigMapName: schema-server-data
+valuesConfigMapName: values-server-data
