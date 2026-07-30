@@ -8,10 +8,27 @@ import uvicorn
 from jsonschema import validate, ValidationError
 import re
 
-OLLAMA_URL = "http://ollama:11434/api/generate"
-SCHEMA_SERVICE_URL = "http://schema-server:5001"
-VALUES_SERVICE_URL = "http://values-server:5002"
-OLLAMA_MODEL = "qwen2.5:3b"
+OLLAMA_BASE_URL = os.getenv(
+    "OLLAMA_BASE_URL",
+    "http://ollama:11434"
+).rstrip("/")
+
+SCHEMA_SERVICE_URL = os.getenv(
+    "SCHEMA_SERVICE_URL",
+    "http://schema-server:5001"
+).rstrip("/")
+
+VALUES_SERVICE_URL = os.getenv(
+    "VALUES_SERVICE_URL",
+    "http://values-server:5002"
+).rstrip("/")
+
+OLLAMA_MODEL = os.getenv(
+    "OLLAMA_MODEL",
+    "qwen2.5:3b"
+)
+
+OLLAMA_GENERATE_URL = f"{OLLAMA_BASE_URL}/api/generate"
 ALLOWED_SERVICES = ["turnike", "yetkilendirme", "entegrasyon"]
 
  
@@ -76,7 +93,7 @@ async def identify_tasks(user_input: str) -> list:
     try:
         async with httpx.AsyncClient() as client:
             print("[STEP 1] Planning tasks from user input...")
-            response = await client.post(OLLAMA_URL, json=payload, timeout=60.0)
+            response = await client.post(OLLAMA_GENERATE_URL, json=payload, timeout=60.0)
             response.raise_for_status()
             
             llm_output = response.json().get("response", "")
@@ -170,7 +187,7 @@ async def generate_patches_for_service(service_name: str, schema: dict, current_
         timeout_config = httpx.Timeout(300.0, connect=60.0) 
         async with httpx.AsyncClient(timeout=timeout_config) as client:
             print(f"[STEP 3] Generating patches for '{service_name}'...", flush=True)
-            response = await client.post(OLLAMA_URL, json=payload)
+            response = await client.post(OLLAMA_GENERATE_URL, json=payload)
             response.raise_for_status()
             
             llm_output = response.json().get("response", "")

@@ -4,6 +4,8 @@ kind: Application
 metadata:
   name: suffatech-data
   namespace: argocd
+  finalizers:
+   - resources-finalizer.argocd.argoproj.io
 
 spec:
   project: default
@@ -26,4 +28,5 @@ spec:
       selfHeal: true
 
     syncOptions:
-      - CreateNamespace=false
+      - CreateNamespace=true
+      - PruneLast=true
