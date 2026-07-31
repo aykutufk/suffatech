@@ -3,50 +3,66 @@ kind: ApplicationSet
 metadata:
   name: suffatech-microservices
   namespace: argocd
+  labels:
+    app.kubernetes.io/name: suffatech-microservices
+    app.kubernetes.io/part-of: suffatech
+
 spec:
-  # 1. BANT ŞEFİNİN İŞ LİSTESİ (Generator)
+  goTemplate: true
+  goTemplateOptions:
+    - missingkey=error
+
   generators:
     - list:
         elements:
-          - name: bot-server
-            valuesFile: deploy/bot-server-values.yaml
-          - name: schema-server
-            valuesFile: deploy/schema-server-values.yaml
-          - name: values-server
-            valuesFile: deploy/values-server-values.yaml
+          - service: bot-server
+            valuesFile: bot-server-values.yaml
 
-  # 2. HER SERVİS İÇİN UYGULANACAK ŞABLON (Template)
+          - service: schema-server
+            valuesFile: schema-server-values.yaml
+
+          - service: values-server
+            valuesFile: values-server-values.yaml
+
   template:
     metadata:
-      name: '{{name}}'
-      namespace: argocd
+      name: 'suffatech-{{ .service }}'
       labels:
-        app.kubernetes.io/managed-by: argocd
-        app.kubernetes.io/part-of: suffatech-project
+        app.kubernetes.io/part-of: suffatech
+        app.kubernetes.io/component: microservice
+        suffatech.io/service: '{{ .service }}'
+
     spec:
       project: default
-      # Git Deposu ve Helm Şablon Konumu
+
       source:
-        repoURL: 'https://github.com/aykutufk/suffatech.git'
+        repoURL: https://github.com/aykutufk/suffatech.git
         targetRevision: main
-        path: charts/microservice  # Ortak DRY Şablonumuzun yeri
+        path: charts/microservice
+
         helm:
           valueFiles:
-            # ÖNEMLİ: ArgoCD value dosyasını chart dizinine göre arar. 
-            # charts/microservice klasöründen çıkıp deploy/ klasörüne gitmek için "../../" kullanıyoruz.
-            - '../../{{valuesFile}}'
+            - '../../deploy/{{ .valuesFile }}'
 
-      # Hedef Kubernetes Kümeli ve Namespace
       destination:
-        server: 'https://kubernetes.default.svc'
-        namespace: suffatech  # Podların, PVC'lerin ve VSO Sırlarının bulunduğu namespace
+        server: https://kubernetes.default.svc
+        namespace: suffatech
 
-      # Kurumsal GitOps Senkronizasyon ve Güvenlik Kuralları
       syncPolicy:
         automated:
-          prune: true      # Git'ten silinen bir kaynağı K8s kümesinden de otomatik sil
-          selfHeal: true   # Birisi kümeye elle müdahale ederse (örn: pod sayısını değiştirirse) Git'teki eskiye zorla döner
+          prune: true
+          selfHeal: true
+
         syncOptions:
-          - CreateNamespace=true        # suffatech namespace'i yoksa otomatik oluştur
-          - ApplyOutOfSyncOnly=true     # Sadece değişikliğe uğrayan kaynakları güncelle (yüksek performans)
-          - PrunePropagationPolicy=foreground
+          - CreateNamespace=true
+          - PruneLast=true
+
+        retry:
+          limit: 5
+          backoff:
+            duration: 5s
+            factor: 2
+            maxDuration: 3m
+
+  syncPolicy:
+    preserveResourcesOnDeletion: false
