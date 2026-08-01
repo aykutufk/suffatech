@@ -3,14 +3,14 @@ replicaCount: 1
 
 image:
   repository: "nexus.suffatech.internal:8083/bot-server"
-  tag: "v1.0.0"
+  tag: "37"
 
 args:
   - "--listen=0.0.0.0:5003"
 
 service:
   type: ClusterIP
-  port: 80
+  port: 5003
   targetPort: 5003
 
 # Diğer servislere Kubernetes iç IP'lerinden (Cluster DNS) ulaşması için adreslerini veriyoruz

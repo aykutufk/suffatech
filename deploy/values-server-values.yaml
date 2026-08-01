@@ -3,7 +3,7 @@ replicaCount: 1
 
 image:
   repository: "nexus.suffatech.internal:8083/values-server"
-  tag: "v1.0.0"
+  tag: "37"
 
 args:
   - "--values-dir=/data/values"
@@ -11,7 +11,7 @@ args:
 
 service:
   type: ClusterIP
-  port: 80
+  port: 5002
   targetPort: 5002
 
 volumeMounts:
