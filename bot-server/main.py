@@ -3,6 +3,7 @@ import copy
 import json
 import os
 import re
+import sys
 from typing import Literal
 
 import httpx
@@ -256,7 +257,7 @@ async def generate_patches_for_service(service_name: str, schema: dict, current_
 
             # Güvenlik kontrolü
             if not isinstance(patches, list):
-                raise ValueError(f"Expected list, got {type(patches)}")
+                raise TypeError(f"Expected list, got {type(patches)}")
 
             return patches
 
@@ -372,7 +373,7 @@ if __name__ == "__main__":
         port = int(port_str)
     except ValueError:
         print("Invalid --listen format. Use host:port")
-        exit(1)
+        sys.exit(1)
 
     print(f"Starting Multi-Agent Orchestrator on {host}:{port}")
     uvicorn.run(app, host=host, port=port)

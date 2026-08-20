@@ -1,6 +1,7 @@
 import argparse
 import json
 import os
+import sys
 
 import uvicorn
 from fastapi import FastAPI, HTTPException
@@ -39,7 +40,7 @@ if __name__ == "__main__":
         port = int(port_str)
     except ValueError:
         print("Invalid --listen format. Use host:port (e.g.,")
-        exit(1)
+        sys.exit(1)
     print(f"Starting Values Service on {host}:{port}, reading values from {VALUES_DIR}")
     uvicorn.run(app, host=host, port=port)
     
