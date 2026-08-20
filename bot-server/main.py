@@ -1,14 +1,16 @@
-from fastapi import FastAPI, HTTPException
-import os
 import argparse
-import json
-import httpx
 import copy
-from typing import Literal
-from pydantic import BaseModel, ValidationError as PydanticValidationError
-import uvicorn
-from jsonschema import validate, ValidationError
+import json
+import os
 import re
+from typing import Literal
+
+import httpx
+import uvicorn
+from fastapi import FastAPI, HTTPException
+from jsonschema import ValidationError, validate
+from pydantic import BaseModel
+from pydantic import ValidationError as PydanticValidationError
 
 OLLAMA_BASE_URL = os.getenv(
     "OLLAMA_BASE_URL",
@@ -329,8 +331,7 @@ async def process_user_request(message: UserMessage):
                 new_val = patch.get("new_value")
                 
                 # LLM inatla slash (/) kullanmışsa, noktaya (.) çevir
-                if path_str.startswith("/"):
-                    path_str = path_str[1:] # Baştaki kök slash'i at
+                path_str = path_str.removeprefix("/") # Baştaki kök slash'i at
                 path_str = path_str.replace("/", ".") # Kalanları noktaya çevir
                 
                 if path_str and new_val is not None:

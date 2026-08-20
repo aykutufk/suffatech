@@ -1,6 +1,7 @@
 import argparse
 import json
 import os
+
 import uvicorn
 from fastapi import FastAPI, HTTPException
 
@@ -23,7 +24,7 @@ async def get_values(app_name: str):
         except json.JSONDecodeError:
             raise HTTPException(status_code=500, detail="Invalid JSON format in values file.")
         except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Internal Server Error: {e!s}")
 
     return values
 

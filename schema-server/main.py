@@ -1,9 +1,9 @@
-from fastapi import FastAPI, HTTPException
-import os
 import argparse
 import json
-import uvicorn
+import os
 
+import uvicorn
+from fastapi import FastAPI, HTTPException
 
 app = FastAPI()
 
@@ -29,7 +29,7 @@ async def get_schema(app_name: str):
         except json.JSONDecodeError:
             raise HTTPException(status_code=500, detail="Invalid JSON format in schema file.")
         except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Internal Server Error: {e!s}")
 
     return schema
 
