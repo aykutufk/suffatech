@@ -3,7 +3,8 @@ import argparse
 import json
 import httpx
 import copy
-from pydantic import BaseModel
+from typing import Literal
+from pydantic import BaseModel, ValidationError as PydanticValidationError
 import uvicorn
 from jsonschema import validate, ValidationError
 import re
@@ -45,6 +46,19 @@ def health_check():
 class UserMessage(BaseModel):
     input: str
 
+
+class PlannedTask(BaseModel):
+    service: Literal[
+        "turnike",
+        "yetkilendirme",
+        "entegrasyon",
+    ]
+    changes: list[str]
+
+
+class TaskPlan(BaseModel):
+    tasks: list[PlannedTask]
+
 def clean_json_response(text: str) -> str:
     """LLM'in üretebileceği markdown bloklarını temizler ve sadece JSON kısmını alır."""
     text = text.strip()
@@ -65,50 +79,87 @@ def apply_patch_to_dict(original_dict, path_str, new_value):
     return original_dict
 
 async def identify_tasks(user_input: str) -> list:
-    """Adım 1: Kullanıcı girdisini analiz edip JSON formatında bir görev listesi çıkartır."""
-    system_prompt = f"""You are a strict Kubernetes Task Router. 
-    Parse the user's input to determine which services to modify and what changes to make.
-    Valid services: {ALLOWED_SERVICES}.
-    
+    """Kullanıcı girdisini yapılandırılmış görev listesine dönüştürür."""
+
+    system_prompt = f"""
+    You are a strict Kubernetes Task Router.
+
+    Parse the user's input and identify which services must be modified.
+
+    Valid services:
+    {ALLOWED_SERVICES}
+
     Rules:
     1. Users may use ';' to separate changes for the SAME service.
     2. Users may use '.' or 'and' to separate DIFFERENT services.
-    3. Output ONLY a valid JSON array of objects. NO explanations. NO markdown.
-    4. Format example:
-    [
-      {{"service": "turnike", "changes": ["memory limit 850", "cpu 500"]}},
-      {{"service": "yetkilendirme", "changes": ["cpu to 10"]}}
-    ]
+    3. Preserve whether the request refers to request, limit, environment
+       variable, memory, or CPU.
+    4. Do not invent services.
+    5. Return data matching the supplied JSON schema.
+
+    Example:
+    {{
+      "tasks": [
+        {{
+          "service": "turnike",
+          "changes": ["set cpu limit to 800"]
+        }}
+      ]
+    }}
     """
-    
+
     payload = {
         "model": OLLAMA_MODEL,
-        "prompt": f"User input: '{user_input}'",
+        "prompt": (
+            "Convert this user request into a task plan: "
+            f"{json.dumps(user_input, ensure_ascii=False)}"
+        ),
         "system": system_prompt,
         "stream": False,
-        "format": "json",
-        "options": {"num_ctx": 4096}
+
+        # "json" yerine gerçek JSON Schema gönderiyoruz.
+        "format": TaskPlan.model_json_schema(),
+
+        "options": {
+            "num_ctx": 4096,
+            "temperature": 0,
+        },
     }
 
     try:
         async with httpx.AsyncClient() as client:
-            print("[STEP 1] Planning tasks from user input...")
-            response = await client.post(OLLAMA_GENERATE_URL, json=payload, timeout=60.0)
-            response.raise_for_status()
-            
-            llm_output = response.json().get("response", "")
-            clean_output = clean_json_response(llm_output)
-            
-            print(f"[TASK PLANNER OUTPUT] -> {clean_output}")
-            tasks = json.loads(clean_output)
-            
-            # Geçerli servisleri filtrele
-            valid_tasks = [t for t in tasks if t.get("service") in ALLOWED_SERVICES]
-            return valid_tasks
+            print("[STEP 1] Planning tasks from user input...", flush=True)
 
-    except (json.JSONDecodeError, httpx.RequestError) as e:
-        print(f"[TASK PLANNER ERROR] -> {e}")
-        raise HTTPException(status_code=500, detail="Failed to parse user intent into tasks.")
+            response = await client.post(
+                OLLAMA_URL,
+                json=payload,
+                timeout=60.0,
+            )
+            response.raise_for_status()
+
+            llm_output = response.json().get("response", "").strip()
+
+            print(
+                f"[TASK PLANNER RAW OUTPUT] -> {llm_output}",
+                flush=True,
+            )
+
+            # clean_json_response kullanmıyoruz.
+            # Pydantic hem JSON'u hem alan tiplerini doğrular.
+            task_plan = TaskPlan.model_validate_json(llm_output)
+
+            return [
+                task.model_dump()
+                for task in task_plan.tasks
+            ]
+
+    except (PydanticValidationError, httpx.HTTPError, ValueError) as exc:
+        print(f"[TASK PLANNER ERROR] -> {exc}", flush=True)
+
+        raise HTTPException(
+            status_code=502,
+            detail="Task planner returned an invalid structured response.",
+        ) from exc
 
 async def fetch_schema_and_values(service_name: str) -> dict:
     """Adım 2: İlgili servis için Schema ve Mevcut Değerleri (Values) çeker."""
