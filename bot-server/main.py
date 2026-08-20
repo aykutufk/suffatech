@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException
+import os
 import argparse
 import json
 import httpx
@@ -131,7 +132,7 @@ async def identify_tasks(user_input: str) -> list:
             print("[STEP 1] Planning tasks from user input...", flush=True)
 
             response = await client.post(
-                OLLAMA_URL,
+                OLLAMA_GENERATE_URL,
                 json=payload,
                 timeout=60.0,
             )
