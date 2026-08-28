@@ -6,7 +6,7 @@ import re
 import sys
 from typing import Literal
 
-#testing out github new webhook2
+#testing out github new webhook2 pollSCM ayarını yaptık artık
 import httpx
 import uvicorn
 from fastapi import FastAPI, HTTPException
