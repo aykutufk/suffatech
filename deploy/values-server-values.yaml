@@ -3,7 +3,7 @@ replicaCount: 1
 
 image:
   repository: "nexus.suffatech.internal:8083/values-server"
-  tag: "37"
+  tag: "56"
 
 args:
   - "--values-dir=/data/values"
