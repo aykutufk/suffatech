@@ -6,7 +6,7 @@ import re
 import sys
 from typing import Literal
 
-#testing out github new webhook2 pollSCM ayarını yaptık artık lütfen ol artık
+#GitHub hook trigger for GITScm polling" tikini açtık artık olması lazım
 import httpx
 import uvicorn
 from fastapi import FastAPI, HTTPException
