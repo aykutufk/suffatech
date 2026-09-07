@@ -1,0 +1,38 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+
+metadata:
+  name: suffatech-alloy
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+
+spec:
+  project: default
+
+  sources:
+    - repoURL: https://grafana.github.io/helm-charts
+      chart: alloy
+      targetRevision: "1.12.1"
+      helm:
+        releaseName: suffatech-alloy
+        valueFiles:
+          - $values/deploy/alloy/values.yaml
+
+    - repoURL: https://github.com/aykutufk/suffatech.git
+      targetRevision: main
+      ref: values
+      path: deploy/alloy/resources
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+
+    syncOptions:
+      - CreateNamespace=true
+      - PruneLast=true

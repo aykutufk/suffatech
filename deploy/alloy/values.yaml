@@ -1,0 +1,11 @@
+controller:
+  type: daemonset
+
+alloy:
+  configMap:
+    create: false
+    name: alloy-config-kubernetes-suffatech
+    key: config.alloy
+
+  mounts:
+    varlog: true
