@@ -1,0 +1,36 @@
+prometheus:
+  prometheusSpec:
+    nodeSelector:
+      role: monitoring
+
+    additionalScrapeConfigs:
+      - job_name: dis-makineler-alloy
+        static_configs:
+          - targets:
+              - 10.20.139.223:12345
+              - 10.20.141.163:12345
+              - 10.10.143.109:12345
+              - 10.10.22.57:12345
+
+grafana:
+  admin:
+    existingSecret: kube-prom-stack-grafana
+    userKey: admin-user
+    passwordKey: admin-password
+
+  nodeSelector:
+    role: monitoring
+
+  dashboards:
+    default:
+      node-exporter-full:
+        gnetId: 1860
+        datasource: Prometheus
+
+alertmanager:
+  alertmanagerSpec:
+    nodeSelector:
+      role: monitoring
+
+nodeExporter:
+  enabled: false

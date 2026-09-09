@@ -1,0 +1,19 @@
+loki:
+  isDefault: false
+
+  nodeSelector:
+    role: monitoring
+
+  persistence:
+    enabled: true
+    size: 10Gi
+
+  service:
+    type: NodePort
+    nodePort: 32000
+
+promtail:
+  enabled: false
+
+grafana:
+  enabled: false
