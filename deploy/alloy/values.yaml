@@ -14,3 +14,10 @@ alloy:
 
   mounts:
     varlog: true
+  
+  extraEnv:
+    - name: NODE_NAME
+      valueFrom:
+        fieldRef:
+          apiVersion: v1
+          fieldPath: spec.nodeName 
