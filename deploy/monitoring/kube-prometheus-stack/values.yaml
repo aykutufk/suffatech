@@ -39,16 +39,6 @@ extraManifests:
         app.kubernetes.io/name: prometheus-remote-write
         app.kubernetes.io/part-of: kube-prometheus-stack
     spec:
-      syncPolicy:
-        automated:
-          prune: true
-          selfHeal: true
-
-        syncOptions:
-          - CreateNamespace=true
-          - PruneLast=true
-          - ServerSideApply=true
-          
       type: NodePort
       externalTrafficPolicy: Cluster
 
