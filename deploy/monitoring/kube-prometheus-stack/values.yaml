@@ -3,14 +3,8 @@ prometheus:
     nodeSelector:
       role: monitoring
 
-    additionalScrapeConfigs:
-      - job_name: dis-makineler-alloy
-        static_configs:
-          - targets:
-              - 10.20.139.223:12345
-              - 10.20.141.163:12345
-              - 10.10.143.109:12345
-              - 10.10.22.57:12345
+    # Alloy'lardan gelen remote-write isteklerini kabul eder.
+    enableRemoteWriteReceiver: true
 
 grafana:
   admin:
@@ -34,3 +28,27 @@ alertmanager:
 
 nodeExporter:
   enabled: false
+
+extraManifests:
+  - apiVersion: v1
+    kind: Service
+    metadata:
+      name: prometheus-remote-write
+      namespace: monitoring
+      labels:
+        app.kubernetes.io/name: prometheus-remote-write
+        app.kubernetes.io/part-of: kube-prometheus-stack
+    spec:
+      type: NodePort
+      externalTrafficPolicy: Cluster
+
+      selector:
+        app.kubernetes.io/name: prometheus
+        operator.prometheus.io/name: kube-prom-stack-kube-prome-prometheus
+
+      ports:
+        - name: remote-write
+          protocol: TCP
+          port: 9090
+          targetPort: 9090
+          nodePort: 32001
