@@ -1,0 +1,86 @@
+---
+- name: Prepare observability gateway certificates
+  hosts: nginx
+  become: true
+  gather_facts: false
+
+  tasks:
+    - name: Install gateway packages
+      ansible.builtin.apt:
+        name:
+          - nginx
+          - apache2-utils
+          - ca-certificates
+          - openssl
+        state: present
+        update_cache: true
+
+    - name: Create Nginx certificate directory
+      ansible.builtin.file:
+        path: /etc/nginx/tls/certs
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Create Nginx private key directory
+      ansible.builtin.file:
+        path: /etc/nginx/tls/private
+        state: directory
+        owner: root
+        group: root
+        mode: "0700"
+
+    - name: Check existing gateway private key
+      ansible.builtin.stat:
+        path: /etc/nginx/tls/private/observability-gateway.key
+      register: gateway_private_key
+
+    - name: Verify gateway private key exists
+      ansible.builtin.assert:
+        that:
+          - gateway_private_key.stat.exists
+          - gateway_private_key.stat.isreg
+        fail_msg: "The observability gateway private key is missing"
+
+    - name: Protect gateway private key
+      ansible.builtin.file:
+        path: /etc/nginx/tls/private/observability-gateway.key
+        owner: root
+        group: root
+        mode: "0600"
+
+    - name: Copy gateway certificate
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/../files/certificates/observability-gateway.crt"
+        dest: /etc/nginx/tls/certs/observability-gateway.crt
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Copy Suffatech Root CA certificate
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/../files/certificates/suffatech-root-ca.crt"
+        dest: /usr/local/share/ca-certificates/suffatech-root-ca.crt
+        owner: root
+        group: root
+        mode: "0644"
+      register: root_ca_copy
+
+    - name: Update operating system CA store
+      ansible.builtin.command:
+        cmd: update-ca-certificates
+      when: root_ca_copy.changed
+
+    - name: Verify gateway certificate with Root CA
+      ansible.builtin.command:
+        cmd: >
+          openssl verify
+          -CAfile /usr/local/share/ca-certificates/suffatech-root-ca.crt
+          /etc/nginx/tls/certs/observability-gateway.crt
+      register: certificate_verification
+      changed_when: false
+
+    - name: Show certificate verification result
+      ansible.builtin.debug:
+        var: certificate_verification.stdout
