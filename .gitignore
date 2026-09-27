@@ -10,3 +10,8 @@ __pycache__/
 
 # Çevresel Değişkenler ve Şifreler (Çok Kritik!)
 .env
+
+# Ansible observability PKI private material
+ansible/files/certificates/*.key
+ansible/files/certificates/*.csr
+ansible/files/certificates/*.srl
