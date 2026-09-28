@@ -1,0 +1,76 @@
+---
+- name: Install Grafana Alloy
+  hosts: external_alloy_nodes
+  become: true
+  gather_facts: true
+
+  tasks:
+    - name: Verify Ubuntu operating system
+      ansible.builtin.assert:
+        that:
+          - ansible_facts["distribution"] == "Ubuntu"
+        fail_msg: "This playbook currently supports Ubuntu only"
+
+    - name: Install GPG package
+      ansible.builtin.apt:
+        name: gpg
+        state: present
+        update_cache: true
+
+    - name: Create APT keyring directory
+      ansible.builtin.file:
+        path: /etc/apt/keyrings
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Download Grafana repository key
+      ansible.builtin.get_url:
+        url: https://apt.grafana.com/gpg-full.key
+        dest: /etc/apt/keyrings/grafana.asc
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Add Grafana APT repository
+      ansible.builtin.copy:
+        dest: /etc/apt/sources.list.d/grafana.list
+        content: |
+          deb [signed-by=/etc/apt/keyrings/grafana.asc] https://apt.grafana.com stable main
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Install Grafana Alloy package
+      ansible.builtin.apt:
+        name: alloy
+        state: present
+        update_cache: true
+
+    - name: Keep Alloy stopped until configuration is ready
+      ansible.builtin.systemd_service:
+        name: alloy
+        state: stopped
+        enabled: false
+
+    - name: Check installed Alloy version
+      ansible.builtin.command:
+        cmd: alloy --version
+      register: alloy_version
+      changed_when: false
+
+    - name: Show installed Alloy version
+      ansible.builtin.debug:
+        var: alloy_version.stdout
+
+    - name: Check Alloy service state
+      ansible.builtin.command:
+        cmd: systemctl is-active alloy
+      register: alloy_service
+      changed_when: false
+      failed_when: false
+
+    - name: Show Alloy service state
+      ansible.builtin.debug:
+        var: alloy_service.stdout
