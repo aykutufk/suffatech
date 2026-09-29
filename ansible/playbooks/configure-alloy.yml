@@ -1,0 +1,32 @@
+- name: Configure and start Grafana Alloy
+  hosts: external_alloy_nodes
+  become: true
+  gather_facts: false
+
+  tasks:
+    - name: Allow Alloy to read system logs
+      ansible.builtin.user:
+        name: alloy
+        groups:
+          - adm
+          - systemd-journal
+        append: true
+
+    - name: Copy Alloy configuration
+      ansible.builtin.copy:
+        src: ../files/alloy/config.alloy
+        dest: /etc/alloy/config.alloy
+        owner: root
+        group: alloy
+        mode: "0640"
+
+    - name: Validate Alloy configuration
+      ansible.builtin.command:
+        cmd: alloy validate /etc/alloy/config.alloy
+      changed_when: false
+
+    - name: Enable and restart Alloy
+      ansible.builtin.systemd_service:
+        name: alloy
+        enabled: true
+        state: restarted

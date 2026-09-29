@@ -1,0 +1,55 @@
+prometheus.exporter.unix "host" {
+}
+
+discovery.relabel "host_metrics" {
+  targets = prometheus.exporter.unix.host.targets
+
+  rule {
+    target_label = "instance"
+    replacement  = constants.hostname
+  }
+
+  rule {
+    target_label = "job"
+    replacement  = "integrations/node_exporter"
+  }
+}
+
+prometheus.scrape "host" {
+  targets         = discovery.relabel.host_metrics.output
+  scrape_interval = "15s"
+  forward_to      = [prometheus.remote_write.central.receiver]
+}
+
+prometheus.remote_write "central" {
+  endpoint {
+    url = "http://10.10.128.254:32001/api/v1/write"
+  }
+}
+
+loki.relabel "journal" {
+  forward_to = []
+
+  rule {
+    source_labels = ["__journal__systemd_unit"]
+    target_label  = "unit"
+  }
+}
+
+loki.source.journal "system" {
+  max_age       = "24h0m0s"
+  relabel_rules = loki.relabel.journal.rules
+
+  labels = {
+    instance = constants.hostname,
+    job      = "systemd-journal",
+  }
+
+  forward_to = [loki.write.central.receiver]
+}
+
+loki.write "central" {
+  endpoint {
+    url = "http://10.10.128.254:32000/loki/api/v1/push"
+  }
+}
